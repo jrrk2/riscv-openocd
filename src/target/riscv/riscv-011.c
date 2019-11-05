@@ -90,13 +90,11 @@
 
 /*** JTAG registers. ***/
 
-#define DTMCONTROL					0x10
 #define DTMCONTROL_DBUS_RESET		(1<<16)
 #define DTMCONTROL_IDLE				(7<<10)
 #define DTMCONTROL_ADDRBITS			(0xf<<4)
 #define DTMCONTROL_VERSION			(0xf)
 
-#define DBUS						0x11
 #define DBUS_OP_START				0
 #define DBUS_OP_SIZE				2
 typedef enum {

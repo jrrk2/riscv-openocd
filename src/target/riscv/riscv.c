@@ -17,6 +17,7 @@
 #include "riscv.h"
 #include "gdb_regs.h"
 #include "rtos/rtos.h"
+#include "jep106.h"
 
 /**
  * Since almost everything can be accomplish by scanning the dbus register, all
@@ -85,13 +86,18 @@
 
 /*** JTAG registers. ***/
 
+#define IDCODE                                          0x01
+#define IDCODE_XILINX                                   0x09
+
 #define DTMCONTROL					0x10
+#define DTMCONTROL_XILINX                               0x22
 #define DTMCONTROL_DBUS_RESET		(1<<16)
 #define DTMCONTROL_IDLE				(7<<10)
 #define DTMCONTROL_ADDRBITS			(0xf<<4)
 #define DTMCONTROL_VERSION			(0xf)
 
 #define DBUS						0x11
+#define DBUS_XILINX                                     0x23
 #define DBUS_OP_START				0
 #define DBUS_OP_SIZE				2
 typedef enum {
@@ -164,7 +170,7 @@ struct scan_field select_dbus = {
 	.in_value = NULL,
 	.out_value = ir_dbus
 };
-uint8_t ir_idcode[4] = {0x1};
+uint8_t ir_idcode[4] = {IDCODE};
 struct scan_field select_idcode = {
 	.in_value = NULL,
 	.out_value = ir_idcode
@@ -974,6 +980,19 @@ static int riscv_examine(struct target *target)
 		LOG_DEBUG("Target was already examined.");
 		return ERROR_OK;
 	}
+
+        if (bscan_tunnel_ir_width == 0)
+          {
+            unsigned int mfg = (unsigned int)EXTRACT_MFG(target->tap->idcode);
+            const char *manuf = jep106_manufacturer(0, mfg);
+            if (!strcmp(manuf, "Xilinx"))
+              {
+                LOG_WARNING("This RISCV is running on a Xilinx FPGA and is assumed to be LowRISC.");
+                ir_dtmcontrol[0] = DTMCONTROL_XILINX;
+                ir_dbus[0] = DBUS_XILINX;
+                ir_idcode[0] = IDCODE_XILINX;
+              }
+          }
 
 	/* Don't need to select dbus, since the first thing we do is read dtmcontrol. */
 

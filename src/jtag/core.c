@@ -895,7 +895,6 @@ void jtag_sleep(uint32_t us)
 
 #define EXTRACT_JEP106_BANK(X) (((X) & 0xf00) >> 8)
 #define EXTRACT_JEP106_ID(X)   (((X) & 0xfe) >> 1)
-#define EXTRACT_MFG(X)  (((X) & 0xffe) >> 1)
 #define EXTRACT_PART(X) (((X) & 0xffff000) >> 12)
 #define EXTRACT_VER(X)  (((X) & 0xf0000000) >> 28)
 
