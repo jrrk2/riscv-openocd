@@ -152,40 +152,29 @@ typedef enum slot {
 #define MAX_HWBPS			16
 #define DRAM_CACHE_SIZE		16
 
-int xilinx; // 1 if we use FPGA JTAG
+uint8_t ir_dtmcontrol[1] = {DTMCONTROL};
+struct scan_field select_dtmcontrol = {
+       .in_value = NULL,
+       .out_value = ir_dtmcontrol
+};
 
-struct scan_field *select_dtmcontrol(struct target *target)
-{
-  static struct scan_field select;
-  static uint8_t ir_dtmcontrol[1];
-  ir_dtmcontrol[0] = (xilinx ? 0x22 : 0x10);
-  select.in_value = NULL;
-  select.out_value = ir_dtmcontrol;
-  select.num_bits = target->tap->ir_length;
-  return &select;
-}
+uint8_t ir_dbus[1] = {DBUS};
+struct scan_field select_dbus = {
+       .in_value = NULL,
+       .out_value = ir_dbus
+};
 
-struct scan_field *select_dbus(struct target *target)
-{
-  static struct scan_field select;
-  static uint8_t ir_dbus[1];
-  ir_dbus[0] = (xilinx ? 0x23 : 0x11);
-  select.in_value = NULL;
-  select.out_value = ir_dbus;
-  select.num_bits = target->tap->ir_length;
-  return &select;
-}
+uint8_t ir_idcode[1] = {0x1};
+struct scan_field select_idcode = {
+       .in_value = NULL,
+       .out_value = ir_idcode
+};
 
-struct scan_field *select_idcode(struct target *target)
-{
-  static struct scan_field select;
-  static uint8_t ir_idcode[1];
-  ir_idcode[0] = (xilinx ? 0x9 : 0x1);
-  select.in_value = NULL;
-  select.out_value = ir_idcode;
-  select.num_bits = target->tap->ir_length;
-  return &select;
-}
+uint8_t ir_dmi[1] = {DBUS};
+struct scan_field select_dmi_ = {
+       .in_value = NULL,
+       .out_value = ir_dmi
+};
 
 struct trigger {
 	uint64_t address;
@@ -221,7 +210,7 @@ static uint32_t dtmcontrol_scan(struct target *target, uint32_t out)
 
 	buf_set_u32(out_value, 0, 32, out);
 
-	jtag_add_ir_scan(target->tap, select_dtmcontrol(target), TAP_IDLE);
+	jtag_add_ir_scan(target->tap, &select_dtmcontrol, TAP_IDLE);
 
 	field.num_bits = 32;
 	field.out_value = out_value;
@@ -229,7 +218,7 @@ static uint32_t dtmcontrol_scan(struct target *target, uint32_t out)
 	jtag_add_dr_scan(target->tap, 1, &field, TAP_IDLE);
 
 	/* Always return to dbus. */
-	jtag_add_ir_scan(target->tap, select_dbus(target), TAP_IDLE);
+	jtag_add_ir_scan(target->tap, &select_dbus, TAP_IDLE);
 
 	int retval = jtag_execute_queue();
 	if (retval != ERROR_OK) {
@@ -268,6 +257,11 @@ static int riscv_init_target(struct command_context *cmd_ctx,
 	riscv_info_t *info = (riscv_info_t *) target->arch_info;
 	riscv_info_init(target, info);
 	info->cmd_ctx = cmd_ctx;
+
+        select_dtmcontrol.num_bits = target->tap->ir_length;
+        select_dbus.num_bits = target->tap->ir_length;
+        select_idcode.num_bits = target->tap->ir_length;
+        select_dmi_.num_bits = target->tap->ir_length;
 
 	return ERROR_OK;
 }
@@ -663,6 +657,17 @@ static int riscv_examine(struct target *target)
 		LOG_DEBUG("Target was already examined.");
 		return ERROR_OK;
 	}
+
+        uint32_t idcode = target->tap->idcode;
+        unsigned int mfg = (unsigned int)EXTRACT_MFG(idcode);
+        
+        if (mfg == 0x049) /* Xilinx */
+          {
+            ir_dtmcontrol[0] = DTMCONTROL_XILINX;
+            ir_dbus[0] = DBUS_XILINX;
+            ir_idcode[0] = IDCODE_XILINX;
+            ir_dmi[0] = DBUS_XILINX;
+          }
 
 	// Don't need to select dbus, since the first thing we do is read dtmcontrol.
 

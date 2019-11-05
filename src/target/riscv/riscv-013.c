@@ -288,17 +288,7 @@ static riscv013_info_t *get_info(const struct target *target)
 
 static void select_dmi(struct target *target)
 {
-	uint8_t ir_dmi[1];
-	ir_dmi[0] = xilinx ? 0x23 : 0x11;
-	struct scan_field field = {
-		.num_bits = target->tap->ir_length,
-		.out_value = ir_dmi,
-		.in_value = NULL,
-		.check_value = NULL,
-		.check_mask = NULL
-	};
-
-	jtag_add_ir_scan(target->tap, &field, TAP_IDLE);
+	jtag_add_ir_scan(target->tap, &select_dbus, TAP_IDLE);
 }
 
 static uint32_t dtmcontrol_scan(struct target *target, uint32_t out)
@@ -309,7 +299,7 @@ static uint32_t dtmcontrol_scan(struct target *target, uint32_t out)
 
 	buf_set_u32(out_value, 0, 32, out);
 
-	jtag_add_ir_scan(target->tap, select_dtmcontrol(target), TAP_IDLE);
+	jtag_add_ir_scan(target->tap, &select_dtmcontrol, TAP_IDLE);
 
 	field.num_bits = 32;
 	field.out_value = out_value;

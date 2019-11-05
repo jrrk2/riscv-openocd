@@ -646,4 +646,6 @@ bool transport_is_jtag(void);
 
 int jim_jtag_newtap(Jim_Interp *interp, int argc, Jim_Obj *const *argv);
 
+#define EXTRACT_MFG(X)  (((X) & 0xffe) >> 1)
+
 #endif /* OPENOCD_JTAG_JTAG_H */
